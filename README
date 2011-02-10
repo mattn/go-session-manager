@@ -1,0 +1,14 @@
+session : go session manager
+
+INTRODUCTION:
+	This is http session manager. This module is installed as http/session.
+	I'll suggest that go official developer team provide this module.
+	Note to remove file "http/session.a".
+
+AUTHOR:
+	Yasuhiro Matsumoto
+
+TODO:
+	* Locking in session manager.
+	* Configurable
+	* Hide request or response object in possibility.

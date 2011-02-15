@@ -53,9 +53,9 @@ type Session struct {
 }
 
 func (session *Session) Abandon() {
-	_, found := (*session.manager)[session.Id]
+	_, found := (*session.manager).sessionMap[session.Id]
 	if found {
-		(*session.manager)[session.Id] = nil, false
+		(*session.manager).sessionMap[session.Id] = nil, false
 	}
 	if session.res != nil {
 		session.res.SetHeader("Set-Cookie", "SessionId=; path=/;")
@@ -63,20 +63,28 @@ func (session *Session) Abandon() {
 }
 
 
-type SessionManager map[string]*Session
+type SessionManager struct {
+	sessionMap map[string]*Session
+	onStart func(*Session)
+	onEnd func(*Session)
+}
 
 func NewSessionManager(logger *log.Logger) *SessionManager {
-	manager := &SessionManager{}
+	manager := &SessionManager{make(map[string]*Session), nil, nil}
 	go func(manager *SessionManager) {
 		for {
 			l := time.LocalTime().Seconds()
-			for id, v := range *manager {
+			for id, v := range (*manager).sessionMap {
 				if v.expire < l {
 					// expire
 					if logger != nil {
 						logger.Printf("Expired session(id:%s)", id)
 					}
-					(*manager)[id] = nil, false
+					f := (*manager).onEnd
+					if f != nil {
+						f((*manager).sessionMap[id])
+					}
+					(*manager).sessionMap[id] = nil, false
 				}
 			}
 			syscall.Sleep(1000000000)
@@ -84,6 +92,9 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 	}(manager)
 	return manager
 }
+
+func (manager *SessionManager) OnStart(f func(*Session)) { manager.onStart = f }
+func (manager *SessionManager) OnEnd(f func(*Session)) { manager.onEnd = f }
 
 func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Request) *Session {
 	c := parseCookie(req)
@@ -98,17 +109,21 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 		m.Write(b)
 		id = fmt.Sprintf("%x", m.Sum())
 	}
-	session, found := (*manager)[id]
+	session, found := (*manager).sessionMap[id]
 	res.SetHeader("Set-Cookie", fmt.Sprintf("SessionId=%s; path=/;", id))
 	if !found {
 		session = &Session{id, nil, time.LocalTime().Seconds()+10, manager, res}
-		(*manager)[id] = session
+		(*manager).sessionMap[id] = session
+		f := (*manager).onStart
+		if f != nil {
+			f(session)
+		}
 	}
 	return session
 }
 
 func (manager *SessionManager) Has(id string) bool {
-	_, found := (*manager)[id]
+	_, found := (*manager).sessionMap[id]
 	return found
 }
 

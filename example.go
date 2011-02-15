@@ -53,22 +53,23 @@ func main() {
 		w.SetHeader("Content-Type", "text/html; charset=utf-8")
 		tmpl.Execute(w, map[string]interface{}{ "session": session })
 	}))
-	http.Handle("/logout", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if manager.GetSession(w, req).Value != nil {
-			name := manager.GetSession(w, req).Value.(string)
-			logger.Printf("User \"%s\" logout", name)
-			manager.GetSession(w, req).Abandon()
-		}
-		w.SetHeader("Pragma", "no-cache")
-		http.Redirect(w, req, "/", http.StatusFound)
-	}))
 	http.Handle("/login", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		name := strings.Trim(req.FormValue("name"), " ")
 		if name != "" {
 			logger.Printf("User \"%s\" login", name)
+
+			// XXX: set user own object.
 			manager.GetSession(w, req).Value = name
 		}
-		w.SetHeader("Pragma", "no-cache")
+		http.Redirect(w, req, "/", http.StatusFound)
+	}))
+	http.Handle("/logout", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if manager.GetSession(w, req).Value != nil {
+			// XXX: get user own object.
+			name := manager.GetSession(w, req).Value.(string)
+			logger.Printf("User \"%s\" logout", name)
+			manager.GetSession(w, req).Abandon()
+		}
 		http.Redirect(w, req, "/", http.StatusFound)
 	}))
 	err := http.ListenAndServe(":6061", nil)

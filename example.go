@@ -31,30 +31,6 @@ You will logout after 10 seconds. Then try to reload.
 {.end}
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 `
 
 var fmap = template.FormatterMap{ "html": template.HTMLFormatter }
@@ -69,9 +45,12 @@ func main() {
 	manager.OnEnd(func(session *session.Session) {
 		println("abandon")
 	})
+	manager.SetTimeout(10)
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		session := manager.GetSession(w, req)
+		w.SetHeader("Pragma", "no-cache")
+		w.SetHeader("Content-Type", "text/html; charset=utf-8")
 		tmpl.Execute(w, map[string]interface{}{ "session": session })
 	}))
 	http.Handle("/logout", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -80,6 +59,7 @@ func main() {
 			logger.Printf("User \"%s\" logout", name)
 			manager.GetSession(w, req).Abandon()
 		}
+		w.SetHeader("Pragma", "no-cache")
 		http.Redirect(w, req, "/", http.StatusFound)
 	}))
 	http.Handle("/login", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -88,6 +68,7 @@ func main() {
 			logger.Printf("User \"%s\" login", name)
 			manager.GetSession(w, req).Value = name
 		}
+		w.SetHeader("Pragma", "no-cache")
 		http.Redirect(w, req, "/", http.StatusFound)
 	}))
 	err := http.ListenAndServe(":6061", nil)

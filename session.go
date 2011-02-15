@@ -67,10 +67,11 @@ type SessionManager struct {
 	sessionMap map[string]*Session
 	onStart func(*Session)
 	onEnd func(*Session)
+	timeout uint
 }
 
 func NewSessionManager(logger *log.Logger) *SessionManager {
-	manager := &SessionManager{make(map[string]*Session), nil, nil}
+	manager := &SessionManager{make(map[string]*Session), nil, nil, 300}
 	go func(manager *SessionManager) {
 		for {
 			l := time.LocalTime().Seconds()
@@ -95,6 +96,8 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 
 func (manager *SessionManager) OnStart(f func(*Session)) { manager.onStart = f }
 func (manager *SessionManager) OnEnd(f func(*Session)) { manager.onEnd = f }
+func (manager *SessionManager) SetTimeout(t uint) { manager.timeout = t }
+func (manager *SessionManager) GetTimeout() uint { return manager.timeout }
 
 func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Request) *Session {
 	c := parseCookie(req)
@@ -109,10 +112,11 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 		m.Write(b)
 		id = fmt.Sprintf("%x", m.Sum())
 	}
+	tm := time.SecondsToUTC(time.LocalTime().Seconds() + int64(manager.timeout))
 	session, found := (*manager).sessionMap[id]
-	res.SetHeader("Set-Cookie", fmt.Sprintf("SessionId=%s; path=/;", id))
+	res.SetHeader("Set-Cookie", fmt.Sprintf("SessionId=%s; path=/; expires=%s;", id, tm.Format("Fri, 02-Jan-2006 15:04:05 -0700")))
 	if !found {
-		session = &Session{id, nil, time.LocalTime().Seconds()+10, manager, res}
+		session = &Session{id, nil, tm.Seconds(), manager, res}
 		(*manager).sessionMap[id] = session
 		f := (*manager).onStart
 		if f != nil {

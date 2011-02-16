@@ -13,13 +13,13 @@ import (
 )
 
 type Cookie struct {
-	Items map[string]string
-	Path string
-	Expires *time.Time
-	Domain string
-	Secure bool
+	Items    map[string]string
+	Path     string
+	Expires  *time.Time
+	Domain   string
+	Secure   bool
 	HttpOnly bool
-	Value interface{}
+	Value    interface{}
 }
 
 func (c *Cookie) Dump() {
@@ -45,19 +45,19 @@ func (c *Cookie) Get(key string) string {
 }
 
 type Session struct {
-	Id string
-	Value interface{}
-	expire int64
+	Id      string
+	Value   interface{}
+	expire  int64
 	manager *SessionManager
-	res http.ResponseWriter
+	res     http.ResponseWriter
 }
 
 type SessionManager struct {
 	sessionMap map[string]*Session
-	onStart func(*Session)
-	onEnd func(*Session)
-	timeout uint
-	mutex sync.RWMutex
+	onStart    func(*Session)
+	onEnd      func(*Session)
+	timeout    uint
+	mutex      sync.RWMutex
 }
 
 func (session *Session) Abandon() {
@@ -102,9 +102,9 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 }
 
 func (manager *SessionManager) OnStart(f func(*Session)) { manager.onStart = f }
-func (manager *SessionManager) OnEnd(f func(*Session)) { manager.onEnd = f }
-func (manager *SessionManager) SetTimeout(t uint) { manager.timeout = t }
-func (manager *SessionManager) GetTimeout() uint { return manager.timeout }
+func (manager *SessionManager) OnEnd(f func(*Session))   { manager.onEnd = f }
+func (manager *SessionManager) SetTimeout(t uint)        { manager.timeout = t }
+func (manager *SessionManager) GetTimeout() uint         { return manager.timeout }
 
 func (manager *SessionManager) GetSessionById(id string) *Session {
 	manager.mutex.Lock()
@@ -139,9 +139,9 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 		session.res = res
 		res.SetHeader("Set-Cookie",
 			fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
-			session.Id,
-			time.SecondsToUTC(session.expire).Format(
-				"Fri, 02-Jan-2006 15:04:05 -0700")))
+				session.Id,
+				time.SecondsToUTC(session.expire).Format(
+					"Fri, 02-Jan-2006 15:04:05 -0700")))
 	}
 	return session
 }

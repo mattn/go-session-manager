@@ -129,6 +129,8 @@ func (manager *SessionManager) GetSessionById(id string) *Session {
 		if f != nil {
 			f(session)
 		}
+	} else {
+		session.expire = tm.Seconds()
 	}
 	return session
 }

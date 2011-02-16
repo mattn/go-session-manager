@@ -39,6 +39,8 @@ You will logout after 10 seconds. Then try to reload.
 
 var fmap = template.FormatterMap{"html": template.HTMLFormatter}
 var tmpl = template.MustParse(page, fmap)
+var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+var manager = session.NewSessionManager(logger)
 
 type User struct {
 	UserId   string
@@ -48,16 +50,18 @@ type User struct {
 }
 
 func main() {
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
-	manager := session.NewSessionManager(logger)
+	//------------------------------------------------
+	// initialize session manager
 	manager.OnStart(func(session *session.Session) {
-		println("started new session")
+		logger.Printf("Start session(\"%s\")", session.Id)
 	})
 	manager.OnEnd(func(session *session.Session) {
-		println("abandon")
+		logger.Printf("End session(\"%s\")", session.Id)
 	})
 	manager.SetTimeout(10)
 
+	//------------------------------------------------
+	// initialize database
 	sqlite3.Initialize()
 	db, e := sqlite3.Open(":memory:")
 	if e != nil {
@@ -70,8 +74,10 @@ func main() {
 		db.Execute("insert into User values('go', 'lang', 'golang', 3)")
 		db.Execute("insert into User values('perl', 'monger', 'perlmonger', 20)")
 	}
+	sql := "select userid,password,realname,age from User where userid = ? and password = ?"
 
-
+	//------------------------------------------------
+	// utility function for web.go
 	GetSession := func(ctx *web.Context) *session.Session {
 		id, _ := ctx.GetSecureCookie("SessionId")
 		session := manager.GetSessionById(id)
@@ -79,26 +85,33 @@ func main() {
 		ctx.SetHeader("Pragma", "no-cache", true)
 		return session
 	}
+	Param := func(ctx *web.Context, name string) string {
+		value, found := ctx.Params[name]
+		if found {
+			return strings.Trim(value, " ")
+		}
+		return ""
+	}
 
+	//------------------------------------------------
+	// go to web
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+
 	web.Get("/", func(ctx *web.Context) {
 		session := GetSession(ctx)
 		tmpl.Execute(ctx, map[string]interface{}{"session": session})
 	})
 	web.Post("/login", func(ctx *web.Context) {
 		session := GetSession(ctx)
-		userid := strings.Trim(ctx.Params["userid"], " ")
-		password := strings.Trim(ctx.Params["password"], " ")
+		userid := Param(ctx, "userid")
+		password := Param(ctx, "password")
 		if userid != "" && password != "" {
-			sql := "select userid,password,realname,age from User where userid = ? and password = ?"
+			// find user
 			st, _ := db.Prepare(sql, userid, password)
 			_, e = st.All(func(s *sqlite3.Statement, values ...interface{}) {
-				user := new(User)
-				user.UserId = values[0].(string)
-				user.Password = values[1].(string)
-				user.RealName = values[2].(string)
-				user.Age = values[3].(int64)
-				session.Value = user
+				// store User object to sessino
+				session.Value = &User{ values[0].(string), values[1].(string), values[2].(string), values[3].(int64)}
+				logger.Printf("User \"%s\" login", session.Value.(*User).UserId)
 			})
 		}
 		ctx.Redirect(302, "/")
@@ -106,8 +119,8 @@ func main() {
 	web.Post("/logout", func(ctx *web.Context) {
 		session := GetSession(ctx)
 		if session.Value != nil {
-			// XXX: get user own object.
-			logger.Printf("User \"%s\" logout", session.Value.(User))
+			// abandon
+			logger.Printf("User \"%s\" logout", session.Value.(*User).UserId)
 			session.Abandon()
 		}
 		ctx.Redirect(302, "/")

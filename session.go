@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"sync"
 	"time"
 )
 
@@ -52,6 +53,14 @@ type Session struct {
 	res http.ResponseWriter
 }
 
+type SessionManager struct {
+	sessionMap map[string]*Session
+	onStart func(*Session)
+	onEnd func(*Session)
+	timeout uint
+	mutex sync.RWMutex
+}
+
 func (session *Session) Abandon() {
 	_, found := (*session.manager).sessionMap[session.Id]
 	if found {
@@ -67,15 +76,10 @@ func (session *Session) Cookie() string {
 	return fmt.Sprintf("SessionId=%s; path=/; expires=%s;", session.Id, tm.Format("Fri, 02-Jan-2006 15:04:05 -0700"))
 }
 
-type SessionManager struct {
-	sessionMap map[string]*Session
-	onStart func(*Session)
-	onEnd func(*Session)
-	timeout uint
-}
-
 func NewSessionManager(logger *log.Logger) *SessionManager {
-	manager := &SessionManager{make(map[string]*Session), nil, nil, 300}
+	manager := new(SessionManager)
+	manager.sessionMap = make(map[string]*Session)
+	manager.timeout = 300
 	go func(manager *SessionManager) {
 		for {
 			l := time.LocalTime().Seconds()
@@ -104,6 +108,8 @@ func (manager *SessionManager) SetTimeout(t uint) { manager.timeout = t }
 func (manager *SessionManager) GetTimeout() uint { return manager.timeout }
 
 func (manager *SessionManager) GetSessionById(id string) *Session {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 	if id == "" || !manager.Has(id) {
 		b := make([]byte, 32)
 		_, err := rand.Read(b)

@@ -110,7 +110,7 @@ func main() {
 			st, _ := db.Prepare(sql, userid, password)
 			_, e = st.All(func(s *sqlite3.Statement, values ...interface{}) {
 				// store User object to sessino
-				session.Value = &User{ values[0].(string), values[1].(string), values[2].(string), values[3].(int64)}
+				session.Value = &User{values[0].(string), values[1].(string), values[2].(string), values[3].(int64)}
 				logger.Printf("User \"%s\" login", session.Value.(*User).UserId)
 			})
 		}

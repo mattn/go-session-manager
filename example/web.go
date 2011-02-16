@@ -33,7 +33,7 @@ You will logout after 10 seconds. Then try to reload.
 </html>
 `
 
-var fmap = template.FormatterMap{ "html": template.HTMLFormatter }
+var fmap = template.FormatterMap{"html": template.HTMLFormatter}
 var tmpl = template.MustParse(page, fmap)
 
 func main() {
@@ -50,15 +50,15 @@ func main() {
 	GetSession := func(ctx *web.Context) *session.Session {
 		id, _ := ctx.GetSecureCookie("SessionId")
 		session := manager.GetSessionById(id)
-        ctx.SetSecureCookie("SessionId", session.Id, int64(manager.GetTimeout()))
+		ctx.SetSecureCookie("SessionId", session.Id, int64(manager.GetTimeout()))
 		ctx.SetHeader("Pragma", "no-cache", true)
 		return session
 	}
 
-    web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 	web.Get("/", func(ctx *web.Context) {
 		session := GetSession(ctx)
-		tmpl.Execute(ctx, map[string]interface{}{ "session": session })
+		tmpl.Execute(ctx, map[string]interface{}{"session": session})
 	})
 	web.Post("/login", func(ctx *web.Context) {
 		name := strings.Trim(ctx.Params["name"], " ")

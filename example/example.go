@@ -33,7 +33,7 @@ You will logout after 10 seconds. Then try to reload.
 </html>
 `
 
-var fmap = template.FormatterMap{ "html": template.HTMLFormatter }
+var fmap = template.FormatterMap{"html": template.HTMLFormatter}
 var tmpl = template.MustParse(page, fmap)
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 		session := manager.GetSession(w, req)
 		w.SetHeader("Pragma", "no-cache")
 		w.SetHeader("Content-Type", "text/html; charset=utf-8")
-		tmpl.Execute(w, map[string]interface{}{ "session": session })
+		tmpl.Execute(w, map[string]interface{}{"session": session})
 	}))
 	http.Handle("/login", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		name := strings.Trim(req.FormValue("name"), " ")
@@ -73,7 +73,7 @@ func main() {
 		http.Redirect(w, req, "/", http.StatusFound)
 	}))
 	err := http.ListenAndServe(":6061", nil)
-    if err != nil {
-        log.Fatal("ListenAndServe:", err)
-    }
+	if err != nil {
+		log.Fatal("ListenAndServe:", err)
+	}
 }

@@ -1,7 +1,6 @@
 package session
 
 import (
-	"crypto/md5"
 	"crypto/rand"
 	"fmt"
 	"http"
@@ -111,14 +110,12 @@ func (manager *SessionManager) GetSessionById(id string) *Session {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 	if id == "" || !manager.Has(id) {
-		b := make([]byte, 32)
+		b := make([]byte, 16)
 		_, err := rand.Read(b)
 		if err != nil {
 			return nil
 		}
-		m := md5.New()
-		m.Write(b)
-		id = fmt.Sprintf("%x", m.Sum())
+		id = fmt.Sprintf("%x", b)
 	}
 	tm := time.SecondsToUTC(time.LocalTime().Seconds() + int64(manager.timeout))
 	session, found := (*manager).sessionMap[id]

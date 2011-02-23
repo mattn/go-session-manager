@@ -133,17 +133,22 @@ func (manager *SessionManager) GetSessionById(id string) *Session {
 }
 
 func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Request) *Session {
-	c := parseCookie(req)
-	session := manager.GetSessionById(c.Get("SessionId"))
-	if res != nil {
-		session.res = res
-		res.SetHeader("Set-Cookie",
-			fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
-				session.Id,
-				time.SecondsToUTC(session.expire).Format(
-					"Fri, 02-Jan-2006 15:04:05 -0700")))
+	cs := parseCookie(req)
+	for _, c := range cs {
+		if c.Get("SessionId") != "" {
+			session := manager.GetSessionById(c.Get("SessionId"))
+			if res != nil {
+				session.res = res
+				res.SetHeader("Set-Cookie",
+					fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
+						session.Id,
+						time.SecondsToUTC(session.expire).Format(
+							"Fri, 02-Jan-2006 15:04:05 -0700")))
+			}
+			return session
+		}
 	}
-	return session
+	return manager.GetSessionById("")
 }
 
 func (manager *SessionManager) Has(id string) bool {
@@ -187,10 +192,12 @@ func StringToCookie(h string) *Cookie {
 	return c
 }
 
-func parseCookie(req *http.Request) *Cookie {
-	h, found := req.Header["Cookie"]
-	if found && len(h) > 0 {
-		return StringToCookie(h)
+func parseCookie(req *http.Request) (cookies []*Cookie) {
+	hs, found := req.Header["Cookie"]
+	if found && len(hs) > 0 {
+		for _, h := range hs {
+			cookies = append(cookies, StringToCookie(h))
+		}
 	}
-	return nil
+	return
 }

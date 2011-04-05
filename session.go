@@ -66,7 +66,7 @@ func (session *Session) Abandon() {
 		(*session.manager).sessionMap[session.Id] = nil, false
 	}
 	if session.res != nil {
-		session.res.SetHeader("Set-Cookie", "SessionId=; path=/;")
+		session.res.Header().Set("Set-Cookie", "SessionId=; path=/;")
 	}
 }
 
@@ -139,7 +139,7 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 			session := manager.GetSessionById(c.Get("SessionId"))
 			if res != nil {
 				session.res = res
-				res.SetHeader("Set-Cookie",
+				res.Header().Set("Set-Cookie",
 					fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
 						session.Id,
 						time.SecondsToUTC(session.expire).Format(

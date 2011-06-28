@@ -162,9 +162,9 @@ func StringToCookie(h string) *Cookie {
 	re, _ := regexp.Compile("[^=]+=[^;]+(; *(expires=[^;]+|path=[^;,]+|domain=[^;,]+|secure|HttpOnly))*,?")
 	rs := re.FindAllString(h, -1)
 	for _, ss := range rs {
-		m := strings.Split(ss, ";", -1)
+		m := strings.Split(ss, ";")
 		for _, n := range m {
-			t := strings.Split(n, "=", 2)
+			t := strings.SplitN(n, "=", 2)
 			if len(t) == 2 {
 				t[0] = strings.Trim(t[0], " ")
 				t[1] = strings.Trim(t[1], " ")

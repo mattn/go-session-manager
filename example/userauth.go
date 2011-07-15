@@ -49,6 +49,22 @@ type User struct {
 	Age      int64
 }
 
+func getSession(ctx *web.Context, manager *session.SessionManager) *session.Session {
+	id, _ := ctx.GetSecureCookie("SessionId")
+	session := manager.GetSessionById(id)
+	ctx.SetSecureCookie("SessionId", session.Id, int64(manager.GetTimeout()))
+	ctx.SetHeader("Pragma", "no-cache", true)
+	return session
+}
+
+func getParam(ctx *web.Context, name string) string {
+	value, found := ctx.Params[name]
+	if found {
+		return strings.Trim(value, " ")
+	}
+	return ""
+}
+
 func main() {
 	//------------------------------------------------
 	// initialize session manager
@@ -77,34 +93,17 @@ func main() {
 	sql := "select userid,password,realname,age from User where userid = ? and password = ?"
 
 	//------------------------------------------------
-	// utility function for web.go
-	GetSession := func(ctx *web.Context) *session.Session {
-		id, _ := ctx.GetSecureCookie("SessionId")
-		session := manager.GetSessionById(id)
-		ctx.SetSecureCookie("SessionId", session.Id, int64(manager.GetTimeout()))
-		ctx.SetHeader("Pragma", "no-cache", true)
-		return session
-	}
-	Param := func(ctx *web.Context, name string) string {
-		value, found := ctx.Params[name]
-		if found {
-			return strings.Trim(value, " ")
-		}
-		return ""
-	}
-
-	//------------------------------------------------
 	// go to web
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 
 	web.Get("/", func(ctx *web.Context) {
-		session := GetSession(ctx)
+		session := getSession(ctx, manager)
 		tmpl.Execute(ctx, map[string]interface{}{"session": session})
 	})
 	web.Post("/login", func(ctx *web.Context) {
-		session := GetSession(ctx)
-		userid := Param(ctx, "userid")
-		password := Param(ctx, "password")
+		session := getSession(ctx, manager)
+		userid := getParam(ctx, "userid")
+		password := getParam(ctx, "password")
 		if userid != "" && password != "" {
 			// find user
 			st, _ := db.Prepare(sql, userid, password)
@@ -117,7 +116,7 @@ func main() {
 		ctx.Redirect(302, "/")
 	})
 	web.Post("/logout", func(ctx *web.Context) {
-		session := GetSession(ctx)
+		session := getSession(ctx, manager)
 		if session.Value != nil {
 			// abandon
 			logger.Printf("User \"%s\" logout", session.Value.(*User).UserId)

@@ -2,11 +2,11 @@ package main
 
 import (
 	"github.com/mattn/go-session-manager"
+	"github.com/hoisie/web.go"
 	"log"
 	"os"
 	"strings"
 	"template"
-	"web"
 )
 
 const page = `

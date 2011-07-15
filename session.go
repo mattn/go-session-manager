@@ -5,44 +5,10 @@ import (
 	"fmt"
 	"http"
 	"log"
-	"regexp"
-	"strings"
 	"syscall"
 	"sync"
 	"time"
 )
-
-type Cookie struct {
-	Items    map[string]string
-	Path     string
-	Expires  *time.Time
-	Domain   string
-	Secure   bool
-	HttpOnly bool
-	Value    interface{}
-}
-
-func (c *Cookie) Dump() {
-	for k, v := range c.Items {
-		println(k, "=", v)
-	}
-}
-
-func (c *Cookie) Has(key string) bool {
-	_, found := c.Items[key]
-	return found
-}
-
-func (c *Cookie) Get(key string) string {
-	if c == nil {
-		return ""
-	}
-	value, found := c.Items[key]
-	if found {
-		return value
-	}
-	return ""
-}
 
 type Session struct {
 	Id      string
@@ -133,20 +99,17 @@ func (manager *SessionManager) GetSessionById(id string) *Session {
 }
 
 func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Request) *Session {
-	cs := parseCookie(req)
-	for _, c := range cs {
-		if c.Get("SessionId") != "" {
-			session := manager.GetSessionById(c.Get("SessionId"))
-			if res != nil {
-				session.res = res
-				res.Header().Set("Set-Cookie",
-					fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
-						session.Id,
-						time.SecondsToUTC(session.expire).Format(
-							"Fri, 02-Jan-2006 15:04:05 -0700")))
-			}
-			return session
+	if c, _ := req.Cookie("SessionId"); c != nil {
+		session := manager.GetSessionById(c.Value)
+		if res != nil {
+			session.res = res
+			res.Header().Set("Set-Cookie",
+				fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
+					session.Id,
+					time.SecondsToUTC(session.expire).Format(
+						"Fri, 02-Jan-2006 15:04:05 -0700")))
 		}
+		return session
 	}
 	return manager.GetSessionById("")
 }
@@ -154,50 +117,4 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 func (manager *SessionManager) Has(id string) bool {
 	_, found := (*manager).sessionMap[id]
 	return found
-}
-
-func StringToCookie(h string) *Cookie {
-	c := new(Cookie)
-	c.Items = make(map[string]string)
-	re, _ := regexp.Compile("[^=]+=[^;]+(; *(expires=[^;]+|path=[^;,]+|domain=[^;,]+|secure|HttpOnly))*,?")
-	rs := re.FindAllString(h, -1)
-	for _, ss := range rs {
-		m := strings.Split(ss, ";")
-		for _, n := range m {
-			t := strings.SplitN(n, "=", 2)
-			if len(t) == 2 {
-				t[0] = strings.Trim(t[0], " ")
-				t[1] = strings.Trim(t[1], " ")
-				switch t[0] {
-				case "domain":
-					c.Domain = t[1]
-				case "path":
-					c.Path = t[1]
-				case "expires":
-					tm, err := time.Parse("Fri, 02-Jan-2006 15:04:05 MST", t[1])
-					if err != nil {
-						tm, err = time.Parse("Fri, 02-Jan-2006 15:04:05 -0700", t[1])
-					}
-					c.Expires = tm
-				case "secure":
-					c.Secure = true
-				case "HttpOnly":
-					c.HttpOnly = true
-				default:
-					c.Items[t[0]] = t[1]
-				}
-			}
-		}
-	}
-	return c
-}
-
-func parseCookie(req *http.Request) (cookies []*Cookie) {
-	hs, found := req.Header["Cookie"]
-	if found && len(hs) > 0 {
-		for _, h := range hs {
-			cookies = append(cookies, StringToCookie(h))
-		}
-	}
-	return
 }

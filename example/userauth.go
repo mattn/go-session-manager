@@ -1,7 +1,7 @@
 package main
 
 import (
-	"http/session"
+	"github.com/mattn/go-session-manager"
 	"log"
 	"os"
 	"strings"

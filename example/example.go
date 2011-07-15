@@ -1,7 +1,7 @@
 package main
 
 import (
-	"http/session"
+	"github.com/mattn/go-session-manager"
 	"http"
 	"log"
 	"os"
@@ -49,8 +49,8 @@ func main() {
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		session := manager.GetSession(w, req)
-		w.SetHeader("Pragma", "no-cache")
-		w.SetHeader("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		tmpl.Execute(w, map[string]interface{}{"session": session})
 	}))
 	http.Handle("/login", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

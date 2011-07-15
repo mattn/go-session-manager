@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 include $(GOROOT)/src/Make.inc
 
-TARG=http/session
+TARG=github.com/mattn/go-session-manager
 GOFILES=\
 	session.go\
 

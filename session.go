@@ -67,24 +67,36 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 	return manager
 }
 
-func (manager *SessionManager) OnStart(f func(*Session)) { manager.onStart = f }
-func (manager *SessionManager) OnEnd(f func(*Session))   { manager.onEnd = f }
-func (manager *SessionManager) SetTimeout(t uint)        { manager.timeout = t }
-func (manager *SessionManager) GetTimeout() uint         { return manager.timeout }
+func (manager *SessionManager) OnStart(f func(*Session)) {
+	manager.onStart = f
+}
 
-func (manager *SessionManager) GetSessionById(id string) *Session {
+func (manager *SessionManager) OnEnd(f func(*Session)) {
+	manager.onEnd = f
+}
+
+func (manager *SessionManager) SetTimeout(t uint) {
+	manager.timeout = t
+}
+
+func (manager *SessionManager) GetTimeout() uint {
+	return manager.timeout
+}
+
+func (manager *SessionManager) GetSessionById(id string) (session *Session) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 	if id == "" || !manager.Has(id) {
 		b := make([]byte, 16)
 		_, err := rand.Read(b)
 		if err != nil {
-			return nil
+			return
 		}
 		id = fmt.Sprintf("%x", b)
 	}
 	tm := time.SecondsToUTC(time.LocalTime().Seconds() + int64(manager.timeout))
-	session, found := (*manager).sessionMap[id]
+	var found bool
+	session, found = (*manager).sessionMap[id]
 	if !found {
 		session = &Session{id, nil, tm.Seconds(), manager, nil}
 		(*manager).sessionMap[id] = session
@@ -95,26 +107,27 @@ func (manager *SessionManager) GetSessionById(id string) *Session {
 	} else {
 		session.expire = tm.Seconds()
 	}
-	return session
+	return
 }
 
-func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Request) *Session {
+func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Request) (session *Session) {
 	if c, _ := req.Cookie("SessionId"); c != nil {
-		session := manager.GetSessionById(c.Value)
-		if res != nil {
-			session.res = res
-			res.Header().Set("Set-Cookie",
-				fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
-					session.Id,
-					time.SecondsToUTC(session.expire).Format(
-						"Fri, 02-Jan-2006 15:04:05 -0700")))
-		}
-		return session
+		session = manager.GetSessionById(c.Value)
+	} else {
+		session = manager.GetSessionById("")
 	}
-	return manager.GetSessionById("")
+	if res != nil {
+		session.res = res
+		res.Header().Add("Set-Cookie",
+			fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
+				session.Id,
+				time.SecondsToUTC(session.expire).Format(
+					"Fri, 02-Jan-2006 15:04:05 -0700")))
+	}
+	return
 }
 
-func (manager *SessionManager) Has(id string) bool {
-	_, found := (*manager).sessionMap[id]
-	return found
+func (manager *SessionManager) Has(id string) (found bool) {
+	_, found = (*manager).sessionMap[id]
+	return
 }

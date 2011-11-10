@@ -71,6 +71,16 @@ func (manager *SessionManager) OnStart(f func(*Session)) {
 	manager.onStart = f
 }
 
+func (manager *SessionManager) Abandon() {
+	f := (*manager).onEnd
+	for id, _ := range (*manager).sessionMap {
+		if f != nil {
+			f((*manager).sessionMap[id])
+		}
+		delete((*manager).sessionMap, id)
+	}
+}
+
 func (manager *SessionManager) OnEnd(f func(*Session)) {
 	manager.onEnd = f
 }

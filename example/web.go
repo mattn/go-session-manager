@@ -10,31 +10,27 @@ import (
 )
 
 const page = `
-<!doctype html>
 <html>
 <meta charset="utf-8"/>
 <body>
-{.section session}
-{.section Value}
-Hi {@}.
+{{if .Value}}.
+Hi {{.Value}}.
 <form method="post" action="/logout">
 <input type="submit" name="method" value="logout" />
 </form>
 You will logout after 10 seconds. Then try to reload.
-{.or}
+{{else}}
 <form method="post" action="/login">
 <label for="name">Name:</label>
 <input type="text" id="name" name="name" value="" />
 <input type="submit" name="method" value="login" />
 </form>
-{.end}
-{.end}
+{{end}}
 </body>
 </html>
 `
 
-var fmap = template.FormatterMap{"html": template.HTMLFormatter}
-var tmpl = template.MustParse(page, fmap)
+var tmpl = template.Must(template.New("x").Parse(page))
 
 func getSession(ctx *web.Context, manager *session.SessionManager) *session.Session {
 	id, _ := ctx.GetSecureCookie("SessionId")
@@ -58,7 +54,7 @@ func main() {
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 	web.Get("/", func(ctx *web.Context) {
 		session := getSession(ctx, manager)
-		tmpl.Execute(ctx, map[string]interface{}{"session": session})
+		tmpl.Execute(ctx, session)
 	})
 	web.Post("/login", func(ctx *web.Context) {
 		name := strings.Trim(ctx.Params["name"], " ")

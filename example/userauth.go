@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/mattn/go-session-manager"
-	"github.com/kuroneko/gosqlite3"
 	"github.com/hoisie/web.go"
+	"github.com/kuroneko/gosqlite3"
+	"github.com/mattn/go-session-manager"
 	"log"
 	"os"
 	"strings"
-	"template"
+	"text/template"
 )
 
 const page = `

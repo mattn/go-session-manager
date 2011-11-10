@@ -2,39 +2,35 @@ package main
 
 import (
 	"github.com/mattn/go-session-manager"
-	"http"
 	"log"
+	"net/http"
 	"os"
 	"strings"
-	"template"
+	"html/template"
 )
 
 const page = `
-<!doctype html>
 <html>
 <meta charset="utf-8"/>
 <body>
-{.section session}
-{.section Value}
-Hi {@}.
+{{if .Value}}.
+Hi {{.Value}}.
 <form method="post" action="/logout">
 <input type="submit" name="method" value="logout" />
 </form>
 You will logout after 10 seconds. Then try to reload.
-{.or}
+{{else}}
 <form method="post" action="/login">
 <label for="name">Name:</label>
 <input type="text" id="name" name="name" value="" />
 <input type="submit" name="method" value="login" />
 </form>
-{.end}
-{.end}
+{{end}}
 </body>
 </html>
 `
 
-var fmap = template.FormatterMap{"html": template.HTMLFormatter}
-var tmpl = template.MustParse(page, fmap)
+var tmpl = template.Must(template.New("x").Parse(page))
 
 func main() {
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
@@ -51,7 +47,7 @@ func main() {
 		session := manager.GetSession(w, req)
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		tmpl.Execute(w, map[string]interface{}{"session": session})
+		tmpl.Execute(w, session)
 	}))
 	http.Handle("/login", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		name := strings.Trim(req.FormValue("name"), " ")

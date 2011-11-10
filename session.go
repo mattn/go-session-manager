@@ -3,10 +3,10 @@ package session
 import (
 	"crypto/rand"
 	"fmt"
-	"http"
 	"log"
-	"syscall"
+	"net/http"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -29,7 +29,7 @@ type SessionManager struct {
 func (session *Session) Abandon() {
 	_, found := (*session.manager).sessionMap[session.Id]
 	if found {
-		(*session.manager).sessionMap[session.Id] = nil, false
+		delete((*session.manager).sessionMap, session.Id)
 	}
 	if session.res != nil {
 		session.res.Header().Set("Set-Cookie", "SessionId=; path=/;")
@@ -58,7 +58,7 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 					if f != nil {
 						f((*manager).sessionMap[id])
 					}
-					(*manager).sessionMap[id] = nil, false
+					delete((*manager).sessionMap, id)
 				}
 			}
 			syscall.Sleep(1000000000)

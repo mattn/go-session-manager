@@ -1,29 +1,30 @@
 package main
 
 import (
+	"exp/sql"
 	"github.com/hoisie/web.go"
-	"github.com/kuroneko/gosqlite3"
 	"github.com/mattn/go-session-manager"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"strings"
 	"text/template"
 )
 
+const dbfile = "./user.db"
+
 const page = `
-<!doctype html>
 <html>
 <meta charset="utf-8"/>
 <body>
-{.section session}
-{.section Value}
-Hi {UserId}.<br />
-Your real name is {RealName}. And you are {Age} years old.<br />
+{{if .Value}}.
+Hi {{.Value.RealName}}.
 <form method="post" action="/logout">
 <input type="submit" name="method" value="logout" />
 </form>
 You will logout after 10 seconds. Then try to reload.
-{.or}
+{{else}}
+{{if .Msg}}<b>{{.Msg}}</b>{{end}}
 <form method="post" action="/login">
 <label for="name">Name:</label><br />
 <input type="text" id="userid" name="userid" value="" /><br />
@@ -31,14 +32,12 @@ You will logout after 10 seconds. Then try to reload.
 <input type="password" id="password" name="password" value="" /><br />
 <input type="submit" name="method" value="login" />
 </form>
-{.end}
-{.end}
+{{end}}
 </body>
 </html>
 `
 
-var fmap = template.FormatterMap{"html": template.HTMLFormatter}
-var tmpl = template.MustParse(page, fmap)
+var tmpl = template.Must(template.New("x").Parse(page))
 var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 var manager = session.NewSessionManager(logger)
 
@@ -65,6 +64,27 @@ func getParam(ctx *web.Context, name string) string {
 	return ""
 }
 
+func dbSetup() {
+	if _, e := os.Stat(dbfile); e != nil {
+		db, e := sql.Open("sqlite3", dbfile)
+		if e != nil {
+			logger.Print(e)
+			return
+		}
+		for _, s := range []string {
+			"create table User (userid varchar(16), password varchar(20), realname varchar(20), age integer)",
+			"insert into User values('go', 'lang', 'golang', 3)",
+			"insert into User values('perl', 'monger', 'perlmonger', 20)",
+		} {
+			if _, e := db.Exec(s); e != nil {
+				logger.Print(e)
+				return
+			}
+		}
+		db.Close()
+	}
+}
+
 func main() {
 	//------------------------------------------------
 	// initialize session manager
@@ -78,27 +98,18 @@ func main() {
 
 	//------------------------------------------------
 	// initialize database
-	sqlite3.Initialize()
-	db, e := sqlite3.Open(":memory:")
-	if e != nil {
-		logger.Print(e.String())
-		return
-	}
-	defer db.Close()
-	table := sqlite3.Table{"User", "userid varchar(16), password varchar(20), realname varchar(20), age integer"}
-	if table.Create(db) == nil {
-		db.Execute("insert into User values('go', 'lang', 'golang', 3)")
-		db.Execute("insert into User values('perl', 'monger', 'perlmonger', 20)")
-	}
-	sql := "select userid,password,realname,age from User where userid = ? and password = ?"
+	dbSetup()
 
 	//------------------------------------------------
 	// go to web
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+	s := "select userid, password, realname, age from User where userid = ? and password = ?"
 
 	web.Get("/", func(ctx *web.Context) {
 		session := getSession(ctx, manager)
-		tmpl.Execute(ctx, map[string]interface{}{"session": session})
+		tmpl.Execute(ctx, map[string]interface{} {
+			"Value": session.Value, "Msg": "",
+		})
 	})
 	web.Post("/login", func(ctx *web.Context) {
 		session := getSession(ctx, manager)
@@ -106,12 +117,31 @@ func main() {
 		password := getParam(ctx, "password")
 		if userid != "" && password != "" {
 			// find user
-			st, _ := db.Prepare(sql, userid, password)
-			_, e = st.All(func(s *sqlite3.Statement, values ...interface{}) {
-				// store User object to sessino
-				session.Value = &User{values[0].(string), values[1].(string), values[2].(string), values[3].(int64)}
-				logger.Printf("User \"%s\" login", session.Value.(*User).UserId)
-			})
+			db, e := sql.Open("sqlite3", dbfile)
+			defer db.Close()
+			st, _ := db.Prepare(s)
+			r, e := st.Query(userid, password)
+			if e != nil {
+				logger.Print(e)
+				return
+			}
+			if !r.Next() {
+				// not found
+				tmpl.Execute(ctx, map[string]interface{} {
+					"Value": nil, "Msg": "User not found",
+				})
+				return
+			}
+			var userid, password, realname string
+			var age int64
+			e = r.Scan(&userid, &password, &realname, &age)
+			if e != nil {
+				logger.Print(e)
+				return
+			}
+			// store User object to sessino
+			session.Value = &User{userid, password, realname, age}
+			logger.Printf("User \"%s\" login", session.Value.(*User).UserId)
 		}
 		ctx.Redirect(302, "/")
 	})

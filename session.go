@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -61,7 +60,7 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 					delete((*manager).sessionMap, id)
 				}
 			}
-			syscall.Sleep(1000000000)
+			time.Sleep(1000000000)
 		}
 	}(manager)
 	return manager

@@ -36,7 +36,7 @@ func (session *Session) Abandon() {
 }
 
 func (session *Session) Cookie() string {
-	tm := time.SecondsToUTC(session.expire)
+	tm := time.Unix(session.expire, 0).UTC()
 	return fmt.Sprintf("SessionId=%s; path=/; expires=%s;", session.Id, tm.Format("Fri, 02-Jan-2006 15:04:05 -0700"))
 }
 
@@ -46,7 +46,7 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 	manager.timeout = 300
 	go func(manager *SessionManager) {
 		for {
-			l := time.LocalTime().Seconds()
+			l := time.Now().Unix()
 			for id, v := range (*manager).sessionMap {
 				if v.expire < l {
 					// expire
@@ -103,18 +103,18 @@ func (manager *SessionManager) GetSessionById(id string) (session *Session) {
 		}
 		id = fmt.Sprintf("%x", b)
 	}
-	tm := time.SecondsToUTC(time.LocalTime().Seconds() + int64(manager.timeout))
+	tm := time.Unix(time.Now().Unix()+int64(manager.timeout), 0).UTC()
 	var found bool
 	session, found = (*manager).sessionMap[id]
 	if !found {
-		session = &Session{id, nil, tm.Seconds(), manager, nil}
+		session = &Session{id, nil, tm.Unix(), manager, nil}
 		(*manager).sessionMap[id] = session
 		f := (*manager).onStart
 		if f != nil {
 			f(session)
 		}
 	} else {
-		session.expire = tm.Seconds()
+		session.expire = tm.Unix()
 	}
 	return
 }
@@ -130,7 +130,7 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 		res.Header().Add("Set-Cookie",
 			fmt.Sprintf("SessionId=%s; path=/; expires=%s;",
 				session.Id,
-				time.SecondsToUTC(session.expire).Format(
+				time.Unix(session.expire, 0).UTC().Format(
 					"Fri, 02-Jan-2006 15:04:05 -0700")))
 	}
 	return

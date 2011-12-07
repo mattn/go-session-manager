@@ -17,7 +17,7 @@ const page = `
 <html>
 <meta charset="utf-8"/>
 <body>
-{{if .Value}}.
+{{if .Value}}
 Hi {{.Value.RealName}}.
 <form method="post" action="/logout">
 <input type="submit" name="method" value="logout" />
@@ -75,6 +75,7 @@ func dbSetup() {
 			"create table User (userid varchar(16), password varchar(20), realname varchar(20), age integer)",
 			"insert into User values('go', 'lang', 'golang', 3)",
 			"insert into User values('perl', 'monger', 'perlmonger', 20)",
+			"insert into User values('japan', 'hello', '日本', 10)",
 		} {
 			if _, e := db.Exec(s); e != nil {
 				logger.Print(e)

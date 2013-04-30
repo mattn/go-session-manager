@@ -36,14 +36,6 @@ func (session *Session) Abandon() {
 	}
 }
 
-func (manager *SessionManager) SetPath(t string) {
-	manager.path = t
-}
-
-func (manager *SessionManager) GetPath() string {
-	return manager.path
-}
-
 func (session *Session) Cookie() string {
 	tm := time.Unix(session.expire, 0).UTC()
 	return fmt.Sprintf("SessionId=%s; path=%s; expires=%s;", session.Id, session.manager.path, tm.Format("Fri, 02-Jan-2006 15:04:05 -0700"))
@@ -99,6 +91,14 @@ func (manager *SessionManager) SetTimeout(t uint) {
 
 func (manager *SessionManager) GetTimeout() uint {
 	return manager.timeout
+}
+
+func (manager *SessionManager) SetPath(t string) {
+	manager.path = t
+}
+
+func (manager *SessionManager) GetPath() string {
+	return manager.path
 }
 
 func (manager *SessionManager) GetSessionById(id string) (session *Session) {

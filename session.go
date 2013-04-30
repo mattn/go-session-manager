@@ -13,7 +13,6 @@ type Session struct {
 	Id      string
 	Value   interface{}
 	expire  int64
-	path	string
 	manager *SessionManager
 	res     http.ResponseWriter
 }
@@ -23,6 +22,7 @@ type SessionManager struct {
 	onStart    func(*Session)
 	onEnd      func(*Session)
 	timeout    uint
+	path	   string
 	mutex      sync.RWMutex
 }
 
@@ -32,21 +32,21 @@ func (session *Session) Abandon() {
 		delete((*session.manager).sessionMap, session.Id)
 	}
 	if session.res != nil {
-		session.res.Header().Set("Set-Cookie", fmt.Sprintf("SessionId=; path=%s;", session.path))
+		session.res.Header().Set("Set-Cookie", fmt.Sprintf("SessionId=; path=%s;", session.manager.path))
 	}
 }
 
-func (session *Session) SetPath(t string) {
-	session.path = t
+func (manager *SessionManager) SetPath(t string) {
+	manager.path = t
 }
 
-func (session *Session) GetPath() string {
-	return session.path
+func (manager *SessionManager) GetPath() string {
+	return manager.path
 }
 
 func (session *Session) Cookie() string {
 	tm := time.Unix(session.expire, 0).UTC()
-	return fmt.Sprintf("SessionId=%s; path=%s; expires=%s;", session.Id, session.path, tm.Format("Fri, 02-Jan-2006 15:04:05 -0700"))
+	return fmt.Sprintf("SessionId=%s; path=%s; expires=%s;", session.Id, session.manager.path, tm.Format("Fri, 02-Jan-2006 15:04:05 -0700"))
 }
 
 func NewSessionManager(logger *log.Logger) *SessionManager {
@@ -116,7 +116,7 @@ func (manager *SessionManager) GetSessionById(id string) (session *Session) {
 	var found bool
 	session, found = (*manager).sessionMap[id]
 	if !found {
-		session = &Session{id, nil, tm.Unix(), "/", manager, nil}
+		session = &Session{id, nil, tm.Unix(), manager, nil}
 		(*manager).sessionMap[id] = session
 		f := (*manager).onStart
 		if f != nil {
@@ -139,7 +139,7 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 		res.Header().Add("Set-Cookie",
 			fmt.Sprintf("SessionId=%s; path=%s; expires=%s;",
 				session.Id,
-				session.path,
+				session.manager.path,
 				time.Unix(session.expire, 0).UTC().Format(
 					"Fri, 02-Jan-2006 15:04:05 -0700")))
 	}

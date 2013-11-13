@@ -141,7 +141,7 @@ func (manager *SessionManager) GetSession(res http.ResponseWriter, req *http.Req
 				session.Id,
 				session.manager.path,
 				time.Unix(session.expire, 0).UTC().Format(
-					"Fri, 02-Jan-2006 15:04:05 -0700")))
+					"Fri, 02-Jan-2006 15:04:05 GMT")))
 	}
 	return
 }

@@ -43,6 +43,7 @@ func (session *Session) Cookie() string {
 
 func NewSessionManager(logger *log.Logger) *SessionManager {
 	manager := new(SessionManager)
+	manager.path = "/"
 	manager.sessionMap = make(map[string]*Session)
 	manager.timeout = 300
 	go func(manager *SessionManager) {

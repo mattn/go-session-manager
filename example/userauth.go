@@ -96,7 +96,7 @@ func main() {
 		logger.Printf("End session(\"%s\")", session.Id)
 	})
 	manager.SetTimeout(10)
-
+	manager.SetPath("/")
 	//------------------------------------------------
 	// initialize database
 	dbSetup()

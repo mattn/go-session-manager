@@ -22,7 +22,7 @@ type SessionManager struct {
 	onStart    func(*Session)
 	onEnd      func(*Session)
 	timeout    uint
-	path	   string
+	path       string
 	mutex      sync.RWMutex
 }
 
@@ -45,6 +45,7 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 	manager := new(SessionManager)
 	manager.sessionMap = make(map[string]*Session)
 	manager.timeout = 300
+	manager.path = "/"
 	go func(manager *SessionManager) {
 		for {
 			l := time.Now().Unix()

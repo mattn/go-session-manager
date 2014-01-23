@@ -22,7 +22,7 @@ type SessionManager struct {
 	onStart    func(*Session)
 	onEnd      func(*Session)
 	timeout    uint
-	path	   string
+	path       string
 	mutex      sync.RWMutex
 }
 
@@ -43,9 +43,9 @@ func (session *Session) Cookie() string {
 
 func NewSessionManager(logger *log.Logger) *SessionManager {
 	manager := new(SessionManager)
-	manager.path = "/"
 	manager.sessionMap = make(map[string]*Session)
 	manager.timeout = 300
+	manager.path = "/"
 	go func(manager *SessionManager) {
 		for {
 			l := time.Now().Unix()
@@ -62,7 +62,7 @@ func NewSessionManager(logger *log.Logger) *SessionManager {
 					delete((*manager).sessionMap, id)
 				}
 			}
-			time.Sleep(1000000000)
+			time.Sleep(time.Second)
 		}
 	}(manager)
 	return manager

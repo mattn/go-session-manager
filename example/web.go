@@ -50,7 +50,7 @@ func main() {
 		println("abandon")
 	})
 	manager.SetTimeout(10)
-
+	manager.SetPath("/")
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 	web.Get("/", func(ctx *web.Context) {
 		session := getSession(ctx, manager)

@@ -42,7 +42,7 @@ func main() {
 		println("abandon")
 	})
 	manager.SetTimeout(10)
-
+	manager.SetPath("/")
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		session := manager.GetSession(w, req)
 		w.Header().Set("Pragma", "no-cache")
